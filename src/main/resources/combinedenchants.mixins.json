@@ -1,0 +1,10 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "uz.shahzod.combinedenchants",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": ["AnvilMixin"],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
