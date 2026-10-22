@@ -21,18 +21,24 @@ public class AnvilMixin {
     private static final String BLAST_PROTECTION = "minecraft:blast_protection";
     private static final String PROJECTILE_PROTECTION = "minecraft:projectile_protection";
 
+    private ItemStack savedLeft = ItemStack.EMPTY;
+    private ItemStack savedRight = ItemStack.EMPTY;
+
+    @Inject(method = "updateResult", at = @At("HEAD"))
+    private void captureSlots(CallbackInfo ci) {
+        AnvilScreenHandler handler = (AnvilScreenHandler)(Object)this;
+        this.savedLeft = handler.getSlot(0).getStack().copy();
+        this.savedRight = handler.getSlot(1).getStack().copy();
+    }
+
     @Inject(method = "onTakeOutput", at = @At("RETURN"))
     private void onTakeOutput(PlayerEntity player, ItemStack stack, CallbackInfo ci) {
         if (stack.isEmpty()) return;
         if (!(stack.getItem() instanceof ArmorItem)) return;
 
-        AnvilScreenHandler handler = (AnvilScreenHandler)(Object)this;
-        ItemStack left = handler.getSlot(0).getStack();
-        ItemStack right = handler.getSlot(1).getStack();
+        if (savedLeft.isEmpty() || savedRight.isEmpty()) return;
 
-        if (left.isEmpty() || right.isEmpty()) return;
-
-        ItemEnchantmentsComponent rightEnchs = right.getOrDefault(
+        ItemEnchantmentsComponent rightEnchs = savedRight.getOrDefault(
             DataComponentTypes.ENCHANTMENTS, ItemEnchantmentsComponent.DEFAULT);
         if (rightEnchs.isEmpty()) return;
 
