@@ -3,6 +3,7 @@ package uz.shahzod.combinedenchants.mixin;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ItemEnchantmentsComponent;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ArmorItem;
 import net.minecraft.registry.entry.RegistryEntry;
@@ -10,7 +11,7 @@ import net.minecraft.screen.AnvilScreenHandler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(AnvilScreenHandler.class)
 public class AnvilMixin {
@@ -20,12 +21,10 @@ public class AnvilMixin {
     private static final String BLAST_PROTECTION = "minecraft:blast_protection";
     private static final String PROJECTILE_PROTECTION = "minecraft:projectile_protection";
 
-    @Inject(method = "updateResult", at = @At("TAIL"))
-    private void onUpdateResult(CallbackInfo ci) {
-        AnvilScreenHandler handler = (AnvilScreenHandler)(Object)this;
-
-        ItemStack left = handler.getSlot(0).getStack();
-        ItemStack right = handler.getSlot(1).getStack();
+    @Inject(method = "onTakeOutput", at = @At("RETURN"))
+    private void onTakeOutput(PlayerEntity player, ItemStack stack, CallbackInfoReturnable<ItemStack> cir) {
+        ItemStack left = ((AnvilScreenHandler)(Object)this).getSlot(0).getStack();
+        ItemStack right = ((AnvilScreenHandler)(Object)this).getSlot(1).getStack();
 
         if (left.isEmpty() || right.isEmpty()) return;
         if (!(left.getItem() instanceof ArmorItem)) return;
@@ -42,10 +41,7 @@ public class AnvilMixin {
 
         if (!hasProtection) return;
 
-        ItemStack result = handler.getSlot(2).getStack();
-        ItemStack newResult = result.isEmpty() ? left.copy() : result.copy();
-
-        ItemEnchantmentsComponent currentEnchs = newResult.getOrDefault(
+        ItemEnchantmentsComponent currentEnchs = stack.getOrDefault(
             DataComponentTypes.ENCHANTMENTS, ItemEnchantmentsComponent.DEFAULT);
 
         ItemEnchantmentsComponent.Builder builder = new ItemEnchantmentsComponent.Builder(currentEnchs);
@@ -59,7 +55,6 @@ public class AnvilMixin {
             builder.set(ench, newLevel);
         }
 
-        newResult.set(DataComponentTypes.ENCHANTMENTS, builder.build());
-        handler.getSlot(2).setStack(newResult);
+        stack.set(DataComponentTypes.ENCHANTMENTS, builder.build());
     }
 }
