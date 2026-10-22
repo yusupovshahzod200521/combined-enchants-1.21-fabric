@@ -11,7 +11,7 @@ import net.minecraft.screen.AnvilScreenHandler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(AnvilScreenHandler.class)
 public class AnvilMixin {
@@ -22,12 +22,15 @@ public class AnvilMixin {
     private static final String PROJECTILE_PROTECTION = "minecraft:projectile_protection";
 
     @Inject(method = "onTakeOutput", at = @At("RETURN"))
-    private void onTakeOutput(PlayerEntity player, ItemStack stack, CallbackInfoReturnable<ItemStack> cir) {
-        ItemStack left = ((AnvilScreenHandler)(Object)this).getSlot(0).getStack();
-        ItemStack right = ((AnvilScreenHandler)(Object)this).getSlot(1).getStack();
+    private void onTakeOutput(PlayerEntity player, ItemStack stack, CallbackInfo ci) {
+        if (stack.isEmpty()) return;
+        if (!(stack.getItem() instanceof ArmorItem)) return;
+
+        AnvilScreenHandler handler = (AnvilScreenHandler)(Object)this;
+        ItemStack left = handler.getSlot(0).getStack();
+        ItemStack right = handler.getSlot(1).getStack();
 
         if (left.isEmpty() || right.isEmpty()) return;
-        if (!(left.getItem() instanceof ArmorItem)) return;
 
         ItemEnchantmentsComponent rightEnchs = right.getOrDefault(
             DataComponentTypes.ENCHANTMENTS, ItemEnchantmentsComponent.DEFAULT);
