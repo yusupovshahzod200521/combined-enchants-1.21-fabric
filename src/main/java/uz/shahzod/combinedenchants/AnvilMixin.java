@@ -1,20 +1,16 @@
 package uz.shahzod.combinedenchants;
 
 import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.item.ItemStack;
-import net.minecraft.registry.RegistryKeys;
+import net.minecraft.item.ArmorItem;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.screen.AnvilScreenHandler;
-import net.minecraft.util.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Mixin(AnvilScreenHandler.class)
 public class AnvilMixin {
@@ -32,12 +28,13 @@ public class AnvilMixin {
         ItemStack right = handler.getSlot(1).getStack();
 
         if (left.isEmpty() || right.isEmpty()) return;
-        if (!(left.getItem() instanceof net.minecraft.item.ArmorItem)) return;
+        if (!(left.getItem() instanceof ArmorItem)) return;
 
-        Map<RegistryEntry<Enchantment>, Integer> rightEnchs = EnchantmentHelper.get(right);
+        ItemEnchantmentsComponent rightEnchs = right.getOrDefault(
+            DataComponentTypes.ENCHANTMENTS, ItemEnchantmentsComponent.DEFAULT);
         if (rightEnchs.isEmpty()) return;
 
-        boolean hasProtection = rightEnchs.keySet().stream().anyMatch(e -> {
+        boolean hasProtection = rightEnchs.getEnchantments().stream().anyMatch(e -> {
             String id = e.getKey().map(k -> k.getValue().toString()).orElse("");
             return id.equals(PROTECTION) || id.equals(FIRE_PROTECTION)
                 || id.equals(BLAST_PROTECTION) || id.equals(PROJECTILE_PROTECTION);
@@ -48,19 +45,21 @@ public class AnvilMixin {
         ItemStack result = handler.getSlot(2).getStack();
         ItemStack newResult = result.isEmpty() ? left.copy() : result.copy();
 
-        Map<RegistryEntry<Enchantment>, Integer> currentEnchs = new HashMap<>(EnchantmentHelper.get(newResult));
+        ItemEnchantmentsComponent currentEnchs = newResult.getOrDefault(
+            DataComponentTypes.ENCHANTMENTS, ItemEnchantmentsComponent.DEFAULT);
 
-        for (Map.Entry<RegistryEntry<Enchantment>, Integer> entry : rightEnchs.entrySet()) {
-            RegistryEntry<Enchantment> ench = entry.getKey();
-            int level = entry.getValue();
-            int existing = currentEnchs.getOrDefault(ench, 0);
-            int newLevel = existing == level
-                ? Math.min(level + 1, ench.value().getMaxLevel())
-                : Math.max(existing, level);
-            currentEnchs.put(ench, newLevel);
+        ItemEnchantmentsComponent.Builder builder = new ItemEnchantmentsComponent.Builder(currentEnchs);
+
+        for (RegistryEntry<Enchantment> ench : rightEnchs.getEnchantments()) {
+            int rightLevel = rightEnchs.getLevel(ench);
+            int currentLevel = currentEnchs.getLevel(ench);
+            int newLevel = currentLevel == rightLevel
+                ? Math.min(rightLevel + 1, ench.value().getMaxLevel())
+                : Math.max(currentLevel, rightLevel);
+            builder.set(ench, newLevel);
         }
 
-        EnchantmentHelper.set(newResult, currentEnchs);
+        newResult.set(DataComponentTypes.ENCHANTMENTS, builder.build());
         handler.getSlot(2).setStack(newResult);
     }
 }
